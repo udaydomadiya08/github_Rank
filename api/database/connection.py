@@ -3,7 +3,10 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from api.config import settings
 
 db_url = settings.database_url
-# We removed the pg8000 override to allow default psycopg2 to handle SSL properly
+
+# Automatically fix Supabase Pooler usernames (if the user forgot to add their project ID)
+if "pooler.supabase.com" in db_url and "://postgres:" in db_url:
+    db_url = db_url.replace("://postgres:", "://postgres.tslnrrmgtenhgevaxzet:")
 
 connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
 engine = create_engine(
