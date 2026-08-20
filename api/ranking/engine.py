@@ -68,14 +68,19 @@ def calculate_rankings(db: Session, timeframe_hours: int = 24):
         vel = 0
         is_estimate = False
         
-        if snap_target and (snap_target.recorded_at.replace(tzinfo=timezone.utc) < now - timedelta(hours=timeframe_hours * 0.5)):
-            # We have a reasonably old snapshot to use real data
+        if snap_target:
+            # How old is the oldest snapshot we found compared to now?
             hours_diff = (current.recorded_at.replace(tzinfo=timezone.utc) - snap_target.recorded_at.replace(tzinfo=timezone.utc)).total_seconds() / 3600
-            if hours_diff > 0:
+            
+            # As long as we have at least 1 hour of real history, project it!
+            if hours_diff >= 1.0:
                 vel_per_hour = (current.stars - snap_target.stars) / hours_diff
                 vel = vel_per_hour * timeframe_hours
+            else:
+                # Fallback to estimate if history is too fresh (< 1 hour)
+                vel = estimated_stars_per_hour * timeframe_hours
+                is_estimate = True
         else:
-            # Fallback to estimate if we don't have enough history for the requested timeframe
             vel = estimated_stars_per_hour * timeframe_hours
             is_estimate = True
                 
