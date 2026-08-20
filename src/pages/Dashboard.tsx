@@ -6,7 +6,7 @@ import { TerminalSquare } from 'lucide-react';
 export const Dashboard: React.FC = () => {
   const [timeframe, setTimeframe] = React.useState('24h');
   
-  const { data: repos, loading } = useApi<any[]>(`/rankings/trending?tf=${timeframe}`, 10000, [timeframe]);
+  const { data: repos, loading } = useApi<any[]>(`/rankings/stars?tf=${timeframe}`, 10000, [timeframe]);
   const { data: status } = useApi<any>('/status', 5000);
 
   const timeframes = [
