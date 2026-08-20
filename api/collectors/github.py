@@ -19,10 +19,9 @@ class GitHubCollector:
             self.headers["Authorization"] = f"token {settings.github_token}"
             
     def fetch_top_repositories(self, limit: int = 500) -> list:
-        repos = []
+        from api.database.models import CrawlerState
         
-        # We will fetch top 100 repos for each major timeframe to ensure we have data 
-        # for "Top repos created in the last X duration"
+        repos = []
         now = datetime.now(timezone.utc)
         timeframes = [
             ("All Time", None),
@@ -36,60 +35,58 @@ class GitHubCollector:
             ("24 Hours", now - timedelta(days=1))
         ]
         
-        for name, cutoff_date in timeframes:
-            query = "stars:>0"
-            if cutoff_date:
-                query += f" created:>{cutoff_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
-                
-            url = "https://api.github.com/search/repositories"
-            logger.info(f"Fetching top 500 repos for timeframe: {name}")
+        # Get state
+        state = self.db.query(CrawlerState).filter(CrawlerState.id == "singleton").first()
+        if not state:
+            state = CrawlerState(id="singleton", current_timeframe_index=0, current_page=1)
+            self.db.add(state)
+            self.db.commit()
             
-            for page in range(1, 6):
-                params = {
-                    "q": query,
-                    "sort": "stars",
-                    "order": "desc",
-                    "per_page": 100,
-                    "page": page
-                }
+        tf_index = state.current_timeframe_index
+        if tf_index >= len(timeframes):
+            tf_index = 0
+            
+        page = state.current_page
+        if page > 5:
+            page = 1
+            tf_index = (tf_index + 1) % len(timeframes)
+            
+        name, cutoff_date = timeframes[tf_index]
+        
+        query = "stars:>0"
+        if cutoff_date:
+            query += f" created:>{cutoff_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+            
+        url = "https://api.github.com/search/repositories"
+        logger.info(f"Fetching timeframe: {name}, Page: {page}")
+        
+        params = {
+            "q": query,
+            "sort": "stars",
+            "order": "desc",
+            "per_page": 100,
+            "page": page
+        }
+        
+        try:
+            response = requests.get(url, headers=self.headers, params=params, timeout=8)
+            if response.status_code == 200:
+                data = response.json()
+                repos.extend(data.get("items", []))
                 
-                items_found = False
-                while True:
-                    try:
-                        response = requests.get(url, headers=self.headers, params=params)
-                        
-                        if response.status_code == 200:
-                            data = response.json()
-                            items = data.get("items", [])
-                            repos.extend(items)
-                            
-                            if items:
-                                items_found = True
-                            
-                            if "Authorization" not in self.headers:
-                                time.sleep(6.5)
-                            break
-                                
-                        elif response.status_code == 401:
-                            logger.warning("GitHub API Error 401: Bad credentials. Falling back to unauthenticated requests.")
-                            if "Authorization" in self.headers:
-                                del self.headers["Authorization"]
-                            time.sleep(2)
-                            continue
-                        elif response.status_code == 403:
-                            logger.warning("GitHub API Error 403: Rate limit exceeded. Backing off for 60 seconds.")
-                            time.sleep(60)
-                            continue
-                        else:
-                            logger.error(f"GitHub API Error {response.status_code}: {response.text}")
-                            break
-                    except requests.exceptions.RequestException as e:
-                        logger.error(f"Network error during fetch: {e}")
-                        break
-                        
-                if not items_found:
-                    break
+                # Increment state for NEXT run
+                if page == 5:
+                    state.current_page = 1
+                    state.current_timeframe_index = (tf_index + 1) % len(timeframes)
+                else:
+                    state.current_page = page + 1
+                self.db.commit()
                 
+            elif response.status_code == 403:
+                logger.warning("GitHub API Error 403: Rate limit exceeded. Try again next run.")
+        except Exception as e:
+            logger.error(f"Network error during fetch: {e}")
+            
         return repos
         
     def _handle_rate_limit(self, response: requests.Response):

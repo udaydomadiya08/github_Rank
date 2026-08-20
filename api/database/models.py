@@ -48,4 +48,10 @@ class CollectionRun(Base):
     repositories_updated = Column(Integer, default=0)
     errors = Column(Integer, default=0)
     rate_limit_remaining = Column(Integer, default=0)
+
+class CrawlerState(Base):
+    __tablename__ = "crawler_state"
+    id = Column(String, primary_key=True, default="singleton")
+    current_timeframe_index = Column(Integer, default=0)
+    current_page = Column(Integer, default=1)
     status = Column(String, default="running")
