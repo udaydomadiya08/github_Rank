@@ -19,16 +19,20 @@ def cron_collect(db: Session = Depends(get_db)):
 
 @router.get("/status")
 def get_status(db: Session = Depends(get_db)):
-    last_run = db.query(CollectionRun).order_by(desc(CollectionRun.id)).first()
-    repo_count = db.query(func.count(Repository.id)).scalar()
-    
-    return {
-        "status": "healthy" if last_run and last_run.status in ("completed", "running") else "error" if last_run and last_run.status == "error" else "unknown",
-        "last_collection": last_run.completed_at if last_run else None,
-        "repositories_tracked": repo_count,
-        "api_requests_remaining": last_run.rate_limit_remaining if last_run else "Unknown",
-        "last_run_status": last_run.status if last_run else None
-    }
+    try:
+        last_run = db.query(CollectionRun).order_by(desc(CollectionRun.id)).first()
+        repo_count = db.query(func.count(Repository.id)).scalar()
+        
+        return {
+            "status": "healthy" if last_run and last_run.status in ("completed", "running") else "error" if last_run and last_run.status == "error" else "unknown",
+            "last_collection": last_run.completed_at if last_run else None,
+            "repositories_tracked": repo_count,
+            "api_requests_remaining": last_run.rate_limit_remaining if last_run else "Unknown",
+            "last_run_status": last_run.status if last_run else None
+        }
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
 
 def _parse_timeframe(tf: str) -> int:
     # Converts a string like '24h', '7d', '1m', '1y' into hours
