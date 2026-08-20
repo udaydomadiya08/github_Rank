@@ -19,9 +19,7 @@ export function useApi<T>(endpoint: string, refreshInterval = 30000, deps: any[]
   };
 
   useEffect(() => {
-    if (!data) {
-      setLoading(true);
-    }
+    setLoading(true);
     fetchData();
 
     let intervalId: any;
