@@ -14,6 +14,11 @@ app = FastAPI(title="GitHub LiveRank API")
 @app.get("/api/migrate")
 def run_migrations():
     try:
+        from sqlalchemy import text
+        from api.database.connection import engine
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE collection_runs ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'running'"))
+            
         Base.metadata.create_all(bind=engine)
         return {"status": "success", "message": "Tables created successfully"}
     except Exception as e:
