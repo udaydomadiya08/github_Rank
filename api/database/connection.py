@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.pool import NullPool
 from api.config import settings
 
 db_url = settings.database_url
@@ -10,7 +11,7 @@ if "pooler.supabase.com" in db_url and "://postgres:" in db_url:
 
 connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
 engine = create_engine(
-    db_url, connect_args=connect_args
+    db_url, connect_args=connect_args, poolclass=NullPool
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
