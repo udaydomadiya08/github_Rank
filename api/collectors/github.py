@@ -47,6 +47,11 @@ class GitHubCollector:
         if tf_index >= len(timeframes):
             tf_index = 0
             
+        page = state.current_page
+        if page > 5:
+            page = 1
+            tf_index = (tf_index + 1) % len(timeframes)
+            
         name, cutoff_date = timeframes[tf_index]
         
         query = "stars:>0"
@@ -54,37 +59,34 @@ class GitHubCollector:
             query += f" created:>{cutoff_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
             
         url = "https://api.github.com/search/repositories"
-        logger.info(f"Fetching full timeframe concurrently: {name}")
+        logger.info(f"Fetching timeframe: {name}, Page: {page} (Unauthenticated Mode)")
         
-        def fetch_page(page):
-            params = {
-                "q": query,
-                "sort": "stars",
-                "order": "desc",
-                "per_page": 100,
-                "page": page
-            }
-            try:
-                response = requests.get(url, headers=self.headers, params=params, timeout=8)
-                if response.status_code == 200:
-                    return response.json().get("items", [])
-                elif response.status_code == 403:
-                    logger.warning("GitHub API Error 403: Rate limit exceeded.")
-            except Exception as e:
-                logger.error(f"Network error during fetch page {page}: {e}")
-            return []
-            
-        # Fetch all 5 pages (500 repos) simultaneously!
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            future_to_page = {executor.submit(fetch_page, page): page for page in range(1, 6)}
-            for future in as_completed(future_to_page):
-                page_repos = future.result()
-                repos.extend(page_repos)
+        params = {
+            "q": query,
+            "sort": "stars",
+            "order": "desc",
+            "per_page": 100,
+            "page": page
+        }
+        
+        try:
+            response = requests.get(url, headers=self.headers, params=params, timeout=8)
+            if response.status_code == 200:
+                data = response.json()
+                repos.extend(data.get("items", []))
                 
-        if repos:
-            # Advance to the next timeframe for the next execution
-            state.current_timeframe_index = (tf_index + 1) % len(timeframes)
-            self.db.commit()
+                # Increment state for NEXT run
+                if page == 5:
+                    state.current_page = 1
+                    state.current_timeframe_index = (tf_index + 1) % len(timeframes)
+                else:
+                    state.current_page = page + 1
+                self.db.commit()
+                
+            elif response.status_code == 403:
+                logger.warning("GitHub API Error 403: Rate limit exceeded. Try again next run.")
+        except Exception as e:
+            logger.error(f"Network error during fetch: {e}")
             
         return repos
         
