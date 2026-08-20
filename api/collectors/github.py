@@ -189,14 +189,6 @@ class GitHubCollector:
         run_record.completed_at = datetime.now(timezone.utc)
         run_record.status = "completed"
         
-        # Determine remaining rate limit by making a dummy request or relying on last response
-        try:
-            resp = requests.get("https://api.github.com/rate_limit", headers=self.headers, timeout=5)
-            if resp.status_code == 200:
-                run_record.rate_limit_remaining = resp.json().get("rate", {}).get("remaining", 0)
-        except Exception:
-            pass
-            
         self.db.commit()
         logger.info(f"Collection run completed. Updated {run_record.repositories_updated} repos.")
 
