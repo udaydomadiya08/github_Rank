@@ -18,14 +18,24 @@ def calculate_rankings(db: Session, timeframe_hours: int = 24):
     # Fetch all repositories
     repos = db.query(Repository).filter(Repository.archived == False).all()
     
+    # Fix N+1 query: Fetch relevant snapshots in one go
+    limit_time = now - timedelta(hours=timeframe_hours * 2 + 48) # Buffer to ensure we get enough history
+    all_snapshots = db.query(RepositorySnapshot)\
+                      .filter(RepositorySnapshot.recorded_at >= limit_time)\
+                      .order_by(RepositorySnapshot.recorded_at.desc())\
+                      .all()
+                      
+    snapshots_by_repo = {}
+    for s in all_snapshots:
+        if s.repository_id not in snapshots_by_repo:
+            snapshots_by_repo[s.repository_id] = []
+        snapshots_by_repo[s.repository_id].append(s)
+    
     results = {}
     
     for repo in repos:
-        # Get snapshots for this repo ordered by time descending
-        snapshots = db.query(RepositorySnapshot)\
-                      .filter(RepositorySnapshot.repository_id == repo.id)\
-                      .order_by(RepositorySnapshot.recorded_at.desc())\
-                      .all()
+        # Get snapshots for this repo from the pre-grouped dictionary
+        snapshots = snapshots_by_repo.get(repo.id, [])
                       
         # Safe fallback for days since creation
         repo_created_at = repo.created_at.replace(tzinfo=timezone.utc) if repo.created_at else now - timedelta(days=365)
