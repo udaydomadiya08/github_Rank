@@ -15,8 +15,6 @@ class GitHubCollector:
         self.headers = {
             "Accept": "application/vnd.github.v3+json",
         }
-        if settings.github_token:
-            self.headers["Authorization"] = f"token {settings.github_token}"
             
     def fetch_top_repositories(self, limit: int = 500) -> list:
         from api.database.models import CrawlerState
