@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 import json
 
-from backend.config import settings
-from backend.database.models import Repository, RepositorySnapshot
+from api.config import settings
+from api.database.models import Repository, RepositorySnapshot
 
 logger = logging.getLogger(__name__)
 

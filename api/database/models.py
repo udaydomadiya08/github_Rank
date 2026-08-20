@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean
 from sqlalchemy.orm import relationship
-from backend.database.connection import Base
+from api.database.connection import Base
 from datetime import datetime, timezone
 
 class Repository(Base):

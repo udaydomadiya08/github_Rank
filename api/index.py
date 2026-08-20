@@ -3,8 +3,8 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.database.connection import engine, Base
-from backend.api.routes import router as api_router
+from api.database.connection import engine, Base
+from api.api.routes import router as api_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -26,4 +26,4 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api")
 
 if __name__ == "__main__":
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)

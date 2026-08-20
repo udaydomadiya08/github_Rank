@@ -2,7 +2,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_, func
 from datetime import datetime, timedelta, timezone
-from backend.database.models import Repository, RepositorySnapshot
+from api.database.models import Repository, RepositorySnapshot
 
 def calculate_rankings(db: Session, timeframe_hours: int = 24):
     """

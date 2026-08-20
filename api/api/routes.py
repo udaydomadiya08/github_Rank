@@ -5,10 +5,10 @@ from typing import List, Optional
 import json
 from datetime import datetime, timezone, timedelta
 
-from backend.database.connection import get_db
-from backend.database.models import Repository, CollectionRun, RepositorySnapshot
-from backend.ranking.engine import calculate_rankings
-from backend.collectors.github import run_collector
+from api.database.connection import get_db
+from api.database.models import Repository, CollectionRun, RepositorySnapshot
+from api.ranking.engine import calculate_rankings
+from api.collectors.github import run_collector
 
 router = APIRouter()
 

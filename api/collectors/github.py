@@ -3,8 +3,8 @@ import time
 import json
 import logging
 from datetime import datetime, timezone, timedelta
-from backend.config import settings
-from backend.database.models import Repository, RepositorySnapshot, CollectionRun
+from api.config import settings
+from api.database.models import Repository, RepositorySnapshot, CollectionRun
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
