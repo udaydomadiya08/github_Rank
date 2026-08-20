@@ -100,18 +100,24 @@ class GitHubCollector:
     def process_repositories(self, repos_data: list, run_record: CollectionRun):
         updated_count = 0
         error_count = 0
-        seen_repos = set()
         
-        for repo_data in repos_data:
+        # 1. Get unique IDs to process
+        unique_repos_data = []
+        seen_ids = set()
+        for rd in repos_data:
+            rid = str(rd["id"])
+            if rid not in seen_ids:
+                seen_ids.add(rid)
+                unique_repos_data.append(rd)
+                
+        # 2. Fetch existing repos in ONE query (Fix N+1 query)
+        existing_repos = self.db.query(Repository).filter(Repository.id.in_(list(seen_ids))).all()
+        existing_map = {r.id: r for r in existing_repos}
+        
+        for repo_data in unique_repos_data:
             try:
                 repo_id = str(repo_data["id"])
-                
-                if repo_id in seen_repos:
-                    continue
-                seen_repos.add(repo_id)
-                
-                # Check if repo exists
-                repo = self.db.query(Repository).filter(Repository.id == repo_id).first()
+                repo = existing_map.get(repo_id)
                 
                 created_at = datetime.strptime(repo_data["created_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
                 updated_at = datetime.strptime(repo_data["updated_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
