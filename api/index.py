@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="GitHub LiveRank API")
 
-@app.get("/migrate")
+@app.get("/api/migrate")
 def run_migrations():
     try:
         Base.metadata.create_all(bind=engine)
